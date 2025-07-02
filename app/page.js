@@ -1,103 +1,211 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
+import Web3 from "web3";
+import bondingManagerAbi from "../ABI/BondingManager.json";
+import { isAddress } from "web3-validator";
 
+const EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+/**
+ * Utility function to introduce a delay between RPC calls.
+ * @param {number} ms - The delay duration in milliseconds.
+ * @returns {Promise} - A promise that resolves after the specified delay.
+ */
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Home component.
+ */
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [delegator, setDelegator] = useState("");
+  const [rpcEndpoint, setRpcEndpoint] = useState("");
+  const [results, setResults] = useState({ transcoder: null, hints: null });
+  const [rpcError, setRpcError] = useState("");
+  const [addressError, setAddressError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const isValidEthAddress = (address) => {
+    return isAddress(address);
+  };
+
+  const validateRpcEndpoint = (url) => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleRpcEndpointChange = (e) => {
+    const value = e.target.value;
+    setRpcEndpoint(value);
+    setRpcError(validateRpcEndpoint(value) ? "" : "Invalid RPC URL.");
+  };
+
+  const handleDelegatorChange = (e) => {
+    const value = e.target.value;
+    setDelegator(value);
+    setAddressError(
+      isValidEthAddress(value) ? "" : "Invalid Ethereum address."
+    );
+  };
+
+  const getTranscoderAndHints = async () => {
+    try {
+      setRpcError("");
+      setAddressError("");
+      setLoading(true);
+
+      if (!validateRpcEndpoint(rpcEndpoint)) {
+        setRpcError("Invalid RPC URL. Please provide a valid endpoint.");
+        setLoading(false);
+        return;
+      }
+
+      if (!isValidEthAddress(delegator)) {
+        setAddressError(
+          "Invalid Ethereum address. Please provide a valid address."
+        );
+        setLoading(false);
+        return;
+      }
+
+      const web3 = new Web3(rpcEndpoint);
+      const bondingManagerAddress =
+        "0x35Bcf3c30594191d53231E4FF333E8A770453e40";
+      const bondingManager = new web3.eth.Contract(
+        bondingManagerAbi,
+        bondingManagerAddress
+      );
+
+      const delegatorInfo = await bondingManager.methods
+        .getDelegator(delegator)
+        .call();
+      const transcoder = delegatorInfo.delegateAddress;
+
+      let prevTranscoder = EMPTY_ADDRESS;
+      let nextTranscoder = await bondingManager.methods
+        .getFirstTranscoderInPool()
+        .call();
+
+      while (nextTranscoder !== EMPTY_ADDRESS) {
+        if (nextTranscoder === transcoder) {
+          // If the transcoder is the first in the active set.
+          if (prevTranscoder === EMPTY_ADDRESS) {
+            nextTranscoder = await bondingManager.methods
+              .getNextTranscoderInPool(nextTranscoder)
+              .call();
+            break;
+          }
+
+          // If the transcoder is the last in the active set.
+          const nextInPool = await bondingManager.methods
+            .getNextTranscoderInPool(nextTranscoder)
+            .call();
+          if (nextInPool === EMPTY_ADDRESS) {
+            nextTranscoder = EMPTY_ADDRESS;
+            break;
+          }
+
+          // If the transcoder is in the middle of the active set.
+          nextTranscoder = await bondingManager.methods
+            .getNextTranscoderInPool(nextTranscoder)
+            .call();
+          break;
+        }
+
+        prevTranscoder = nextTranscoder;
+        nextTranscoder = await bondingManager.methods
+          .getNextTranscoderInPool(nextTranscoder)
+          .call();
+
+        await delay(200);
+      }
+
+      setResults({
+        transcoder,
+        hints: { prev: prevTranscoder, next: nextTranscoder },
+      });
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setResults({ transcoder: "Error", hints: null });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 bg-gray-900 text-white font-sans">
+      <main className="flex flex-col gap-6 row-start-2 items-center sm:items-start">
+        <h1 className="text-2xl font-bold">Get Delegate Hints</h1>
+        <p>
+          A simple tool to retrieve delegator list hints for <br />
+          your orchestrator.This helps reduce gas fees when <br />
+          interacting with smart contract methods <br />
+          like <b>unbondWithHint</b>.
+        </p>
+        <div className="w-full sm:w-96">
+          <input
+            type="text"
+            placeholder="Enter RPC Endpoint"
+            value={rpcEndpoint}
+            onChange={handleRpcEndpointChange}
+            className={`border p-2 rounded w-full bg-gray-800 text-white ${
+              rpcError ? "border-red-500" : "border-gray-700"
+            }`}
+          />
+          {rpcError && <p className="text-red-500 text-sm mt-1">{rpcError}</p>}
         </div>
+        <div className="w-full sm:w-96">
+          <input
+            type="text"
+            placeholder="Enter Delegator Address"
+            value={delegator}
+            onChange={handleDelegatorChange}
+            className={`border p-2 rounded w-full bg-gray-800 text-white mt-4 ${
+              addressError ? "border-red-500" : "border-gray-700"
+            }`}
+          />
+          {addressError && (
+            <p className="text-red-500 text-sm mt-1">{addressError}</p>
+          )}
+        </div>
+        <button
+          onClick={getTranscoderAndHints}
+          className={`bg-blue-500 text-white px-4 py-2 rounded mt-4 ${
+            !rpcEndpoint || !isValidEthAddress(delegator)
+              ? "opacity-50 cursor-not-allowed"
+              : ""
+          }`}
+          disabled={!rpcEndpoint || !isValidEthAddress(delegator)}
+        >
+          {loading ? "Loading..." : "Get Transcoder and Hints"}
+        </button>
+        {loading && (
+          <div className="flex items-center justify-center mt-6">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        )}
+        {!loading && results.transcoder && (
+          <div className="mt-6 p-4 rounded bg-gray-800 w-full sm:w-96 shadow-lg">
+            <h2 className="text-lg font-semibold text-green-400">Transcoder</h2>
+            <p className="text-green-300 break-words">{results.transcoder}</p>
+          </div>
+        )}
+        {!loading && results.hints && (
+          <div className="mt-4 p-4 rounded bg-gray-800 w-full sm:w-96 shadow-lg">
+            <h2 className="text-lg font-semibold text-green-400">Hints</h2>
+            <p className="text-green-300 break-words">
+              <span className="font-medium">Previous:</span>{" "}
+              {results.hints.prev}
+            </p>
+            <p className="text-green-300 break-words mt-2">
+              <span className="font-medium">Next:</span> {results.hints.next}
+            </p>
+          </div>
+        )}
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
