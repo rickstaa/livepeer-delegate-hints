@@ -1,6 +1,6 @@
 # Delegate Hints
 
-A tool to retrieve delegator hints for orchestrators, helping reduce gas fees when interacting with Livepeer smart contract methods like `bondWithHint`, `unbondWithHint`, and `rebondWithHint`.
+An app to retrieve delegator hints for orchestrators, helping reduce gas fees when interacting with Livepeer smart contract methods like `bondWithHint`, `unbondWithHint`, and `rebondWithHint`.
 
 ## What Are Hints?
 
