@@ -18,6 +18,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 export default function Home() {
   const [delegator, setDelegator] = useState("");
+  const [orchestrator, setOrchestrator] = useState(""); // New state for orchestrator
   const [rpcEndpoint, setRpcEndpoint] = useState("");
   const [results, setResults] = useState({ transcoder: null, hints: null });
   const [rpcError, setRpcError] = useState("");
@@ -51,6 +52,14 @@ export default function Home() {
     );
   };
 
+  const handleOrchestratorChange = (e) => {
+    const value = e.target.value;
+    setOrchestrator(value);
+    setAddressError(
+      isValidEthAddress(value) ? "" : "Invalid Ethereum address."
+    );
+  };
+
   const getTranscoderAndHints = async () => {
     try {
       setRpcError("");
@@ -63,9 +72,9 @@ export default function Home() {
         return;
       }
 
-      if (!isValidEthAddress(delegator)) {
+      if (!isValidEthAddress(delegator) && !isValidEthAddress(orchestrator)) {
         setAddressError(
-          "Invalid Ethereum address. Please provide a valid address."
+          "Invalid Ethereum address. Please provide a valid delegator or orchestrator address."
         );
         setLoading(false);
         return;
@@ -79,10 +88,10 @@ export default function Home() {
         bondingManagerAddress
       );
 
-      const delegatorInfo = await bondingManager.methods
-        .getDelegator(delegator)
-        .call();
-      const transcoder = delegatorInfo.delegateAddress;
+      const transcoder =
+        orchestrator ||
+        (await bondingManager.methods.getDelegator(delegator).call())
+          .delegateAddress;
 
       let prevTranscoder = EMPTY_ADDRESS;
       let nextTranscoder = await bondingManager.methods
@@ -91,7 +100,6 @@ export default function Home() {
 
       while (nextTranscoder !== EMPTY_ADDRESS) {
         if (nextTranscoder === transcoder) {
-          // If the transcoder is the first in the active set.
           if (prevTranscoder === EMPTY_ADDRESS) {
             nextTranscoder = await bondingManager.methods
               .getNextTranscoderInPool(nextTranscoder)
@@ -99,7 +107,6 @@ export default function Home() {
             break;
           }
 
-          // If the transcoder is the last in the active set.
           const nextInPool = await bondingManager.methods
             .getNextTranscoderInPool(nextTranscoder)
             .call();
@@ -108,7 +115,6 @@ export default function Home() {
             break;
           }
 
-          // If the transcoder is in the middle of the active set.
           nextTranscoder = await bondingManager.methods
             .getNextTranscoderInPool(nextTranscoder)
             .call();
@@ -140,10 +146,9 @@ export default function Home() {
       <main className="flex flex-col gap-6 row-start-2 items-center sm:items-start">
         <h1 className="text-2xl font-bold">Get Delegate Hints</h1>
         <p>
-          A simple tool to retrieve delegator list hints for <br />
-          your orchestrator.This helps reduce gas fees when <br />
-          interacting with smart contract methods <br />
-          like <b>unbondWithHint</b>.
+          A simple tool to retrieve orchestrator list hints <br />
+          This helps reduce gas fees when interacting with <br />
+          methods on the BondingManager contract.
         </p>
         <div className="w-full sm:w-96">
           <input
@@ -167,6 +172,21 @@ export default function Home() {
               addressError ? "border-red-500" : "border-gray-700"
             }`}
           />
+        </div>
+        <div className="w-full sm:w-96">
+          <p className="text-sm text-gray-400 mt-2">
+            If you already know the orchestrator address, you can enter it
+            below.
+          </p>
+          <input
+            type="text"
+            placeholder="Enter Orchestrator Address (optional)"
+            value={orchestrator}
+            onChange={handleOrchestratorChange}
+            className={`border p-2 rounded w-full bg-gray-800 text-white mt-4 ${
+              addressError ? "border-red-500" : "border-gray-700"
+            }`}
+          />
           {addressError && (
             <p className="text-red-500 text-sm mt-1">{addressError}</p>
           )}
@@ -174,11 +194,15 @@ export default function Home() {
         <button
           onClick={getTranscoderAndHints}
           className={`bg-blue-500 text-white px-4 py-2 rounded mt-4 ${
-            !rpcEndpoint || !isValidEthAddress(delegator)
+            !rpcEndpoint ||
+            (!isValidEthAddress(delegator) && !isValidEthAddress(orchestrator))
               ? "opacity-50 cursor-not-allowed"
               : ""
           }`}
-          disabled={!rpcEndpoint || !isValidEthAddress(delegator)}
+          disabled={
+            !rpcEndpoint ||
+            (!isValidEthAddress(delegator) && !isValidEthAddress(orchestrator))
+          }
         >
           {loading ? "Loading..." : "Get Transcoder and Hints"}
         </button>
