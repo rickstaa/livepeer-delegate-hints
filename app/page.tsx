@@ -126,7 +126,16 @@ export default function Home() {
         <p>
           A simple tool to retrieve orchestrator list hints <br />
           This helps reduce gas fees when interacting with <br />
-          methods on the BondingManager contract.
+          methods on the{" "}
+          <a
+            href="https://arbiscan.io/address/0x35Bcf3c30594191d53231E4FF333E8A770453e40"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 underline"
+          >
+            BondingManager
+          </a>{" "}
+          contract.
         </p>
         <div className="w-full sm:w-96">
           <input
@@ -157,8 +166,8 @@ export default function Home() {
         <button
           onClick={getHints}
           className={`bg-blue-500 text-white px-4 py-2 rounded mt-4 ${!isValidEthAddress(delegator) && !isValidEthAddress(orchestrator)
-              ? "opacity-50 cursor-not-allowed"
-              : ""
+            ? "opacity-50 cursor-not-allowed"
+            : ""
             }`}
           disabled={
             !isValidEthAddress(delegator) && !isValidEthAddress(orchestrator)
@@ -175,11 +184,11 @@ export default function Home() {
           <div className="mt-4 p-4 rounded bg-gray-800 w-full sm:w-96 shadow-lg">
             <h2 className="text-lg font-semibold text-green-400">Hints</h2>
             <p className="text-green-300 break-words">
-              <span className="font-medium">Previous:</span>{" "}
+              <span className="font-medium underline">Previous:</span>{" "}
               {results.hints.prev || "N/A"}
             </p>
             <p className="text-green-300 break-words mt-2">
-              <span className="font-medium">Next:</span>{" "}
+              <span className="font-medium underline">Next:</span>{" "}
               {results.hints.next || "N/A"}
             </p>
           </div>
