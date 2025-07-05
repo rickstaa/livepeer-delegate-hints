@@ -1,0 +1,10 @@
+import BONDING_MANAGER_ABI from "./ABI/BondingManager.json";
+import ROUNDS_MANAGER_ABI from "./ABI/RoundsManager.json";
+export { BONDING_MANAGER_ABI, ROUNDS_MANAGER_ABI };
+export const EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000";
+export const RPC_ENDPOINT =
+  process.env.NEXT_RPC_ENDPOINT || "https://arb1.arbitrum.io/rpc";
+export const BONDING_MANAGER_ADDRESS =
+  "0x35Bcf3c30594191d53231E4FF333E8A770453e40";
+export const ROUNDS_MANAGER_ADDRESS =
+  "0xdd6f56DcC28D3F5f27084381fE8Df634985cc39f";

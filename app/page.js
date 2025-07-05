@@ -1,49 +1,30 @@
 "use client";
 import { useState } from "react";
-import Web3 from "web3";
-import bondingManagerAbi from "../ABI/BondingManager.json";
 import { isAddress } from "web3-validator";
-
-const EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000";
-
-/**
- * Utility function to introduce a delay between RPC calls.
- * @param {number} ms - The delay duration in milliseconds.
- * @returns {Promise} - A promise that resolves after the specified delay.
- */
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Home component.
  */
 export default function Home() {
   const [delegator, setDelegator] = useState("");
-  const [orchestrator, setOrchestrator] = useState(""); // New state for orchestrator
-  const [rpcEndpoint, setRpcEndpoint] = useState("");
-  const [results, setResults] = useState({ transcoder: null, hints: null });
-  const [rpcError, setRpcError] = useState("");
+  const [orchestrator, setOrchestrator] = useState("");
+  const [results, setResults] = useState({ hints: null });
   const [addressError, setAddressError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  /**
+   * Validates if the provided address is a valid Ethereum address.
+   * @param {string} address - The Ethereum address to validate.
+   * @returns {boolean} - Returns true if the address is valid, otherwise false.
+   */
   const isValidEthAddress = (address) => {
     return isAddress(address);
   };
 
-  const validateRpcEndpoint = (url) => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const handleRpcEndpointChange = (e) => {
-    const value = e.target.value;
-    setRpcEndpoint(value);
-    setRpcError(validateRpcEndpoint(value) ? "" : "Invalid RPC URL.");
-  };
-
+  /**
+   * Handles the change event for the delegator input field.
+   * @param {Object} e - The event object.
+   */
   const handleDelegatorChange = (e) => {
     const value = e.target.value;
     setDelegator(value);
@@ -52,6 +33,10 @@ export default function Home() {
     );
   };
 
+  /**
+   * Handles the change event for the orchestrator input field.
+   * @param {Object} e - The event object.
+   */
   const handleOrchestratorChange = (e) => {
     const value = e.target.value;
     setOrchestrator(value);
@@ -60,82 +45,71 @@ export default function Home() {
     );
   };
 
-  const getTranscoderAndHints = async () => {
+  /**
+   * Fetches the orchestrator address based on the provided delegator address.
+   * @param {string} delegator - The delegator address.
+   * @returns {Promise<string>} - The orchestrator address.
+   */
+  const fetchOrchestrator = async (delegator) => {
+    const response = await fetch(`/api/getOrchestrator?delegator=${delegator}`);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to fetch orchestrator.");
+    }
+    return data.orchestrator;
+  };
+
+  /**
+   * Fetches the hints for a given orchestrator.
+   * @param {string} orchestrator - The orchestrator address.
+   * @returns {Promise<Object>} - The hints object containing previous and next hints.
+   */
+  const fetchHints = async (orchestrator) => {
+    const response = await fetch(`/api/getHints?orchestrator=${orchestrator}`);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to fetch hints.");
+    }
+    return data.hints;
+  };
+
+  /**
+   * Fetches hints based on the provided delegator or orchestrator address.
+   * If the orchestrator address is not provided, it fetches it using the delegator
+   * address.
+   * @returns {Promise<void>} - A promise that resolves when the hints are fetched.
+   */
+  const getHints = async () => {
     try {
-      setRpcError("");
       setAddressError("");
       setLoading(true);
 
-      if (!validateRpcEndpoint(rpcEndpoint)) {
-        setRpcError("Invalid RPC URL. Please provide a valid endpoint.");
-        setLoading(false);
-        return;
-      }
-
       if (!isValidEthAddress(delegator) && !isValidEthAddress(orchestrator)) {
         setAddressError(
-          "Invalid Ethereum address. Please provide a valid delegator or orchestrator address."
+          "Invalid Ethereum address. Please provide a valid delegator or " +
+            "orchestrator address."
         );
         setLoading(false);
         return;
       }
 
-      const web3 = new Web3(rpcEndpoint);
-      const bondingManagerAddress =
-        "0x35Bcf3c30594191d53231E4FF333E8A770453e40";
-      const bondingManager = new web3.eth.Contract(
-        bondingManagerAbi,
-        bondingManagerAddress
-      );
+      let orch = orchestrator;
 
-      const transcoder =
-        orchestrator ||
-        (await bondingManager.methods.getDelegator(delegator).call())
-          .delegateAddress;
-
-      let prevTranscoder = EMPTY_ADDRESS;
-      let nextTranscoder = await bondingManager.methods
-        .getFirstTranscoderInPool()
-        .call();
-
-      while (nextTranscoder !== EMPTY_ADDRESS) {
-        if (nextTranscoder === transcoder) {
-          if (prevTranscoder === EMPTY_ADDRESS) {
-            nextTranscoder = await bondingManager.methods
-              .getNextTranscoderInPool(nextTranscoder)
-              .call();
-            break;
-          }
-
-          const nextInPool = await bondingManager.methods
-            .getNextTranscoderInPool(nextTranscoder)
-            .call();
-          if (nextInPool === EMPTY_ADDRESS) {
-            nextTranscoder = EMPTY_ADDRESS;
-            break;
-          }
-
-          nextTranscoder = await bondingManager.methods
-            .getNextTranscoderInPool(nextTranscoder)
-            .call();
-          break;
-        }
-
-        prevTranscoder = nextTranscoder;
-        nextTranscoder = await bondingManager.methods
-          .getNextTranscoderInPool(nextTranscoder)
-          .call();
-
-        await delay(200);
+      // If no orchestrator is provided, fetch it using the delegator address.
+      if (!orch && delegator) {
+        orch = await fetchOrchestrator(delegator);
+        setOrchestrator(orch);
       }
 
-      setResults({
-        transcoder,
-        hints: { prev: prevTranscoder, next: nextTranscoder },
-      });
+      if (!orch) {
+        throw new Error("Orchestrator address is required.");
+      }
+
+      const hints = await fetchHints(orch);
+      setResults({ hints });
     } catch (error) {
-      console.error("Error fetching data:", error);
-      setResults({ transcoder: "Error", hints: null });
+      console.error("Error fetching hints:", error);
+      setResults({ hints: null });
     } finally {
       setLoading(false);
     }
@@ -150,18 +124,6 @@ export default function Home() {
           This helps reduce gas fees when interacting with <br />
           methods on the BondingManager contract.
         </p>
-        <div className="w-full sm:w-96">
-          <input
-            type="text"
-            placeholder="Enter RPC Endpoint"
-            value={rpcEndpoint}
-            onChange={handleRpcEndpointChange}
-            className={`border p-2 rounded w-full bg-gray-800 text-white ${
-              rpcError ? "border-red-500" : "border-gray-700"
-            }`}
-          />
-          {rpcError && <p className="text-red-500 text-sm mt-1">{rpcError}</p>}
-        </div>
         <div className="w-full sm:w-96">
           <input
             type="text"
@@ -192,29 +154,21 @@ export default function Home() {
           )}
         </div>
         <button
-          onClick={getTranscoderAndHints}
+          onClick={getHints}
           className={`bg-blue-500 text-white px-4 py-2 rounded mt-4 ${
-            !rpcEndpoint ||
-            (!isValidEthAddress(delegator) && !isValidEthAddress(orchestrator))
+            !isValidEthAddress(delegator) && !isValidEthAddress(orchestrator)
               ? "opacity-50 cursor-not-allowed"
               : ""
           }`}
           disabled={
-            !rpcEndpoint ||
-            (!isValidEthAddress(delegator) && !isValidEthAddress(orchestrator))
+            !isValidEthAddress(delegator) && !isValidEthAddress(orchestrator)
           }
         >
-          {loading ? "Loading..." : "Get Transcoder and Hints"}
+          {loading ? "Loading..." : "Get Hints"}
         </button>
         {loading && (
           <div className="flex items-center justify-center mt-6">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        )}
-        {!loading && results.transcoder && (
-          <div className="mt-6 p-4 rounded bg-gray-800 w-full sm:w-96 shadow-lg">
-            <h2 className="text-lg font-semibold text-green-400">Transcoder</h2>
-            <p className="text-green-300 break-words">{results.transcoder}</p>
           </div>
         )}
         {!loading && results.hints && (
@@ -222,10 +176,11 @@ export default function Home() {
             <h2 className="text-lg font-semibold text-green-400">Hints</h2>
             <p className="text-green-300 break-words">
               <span className="font-medium">Previous:</span>{" "}
-              {results.hints.prev}
+              {results.hints.prev || "N/A"}
             </p>
             <p className="text-green-300 break-words mt-2">
-              <span className="font-medium">Next:</span> {results.hints.next}
+              <span className="font-medium">Next:</span>{" "}
+              {results.hints.next || "N/A"}
             </p>
           </div>
         )}
