@@ -1,5 +1,9 @@
+/**
+ * @file Contains main app layout.
+ */
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { GithubCorner } from "./components/GithubCorner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,6 +21,9 @@ export const metadata = {
     "Small app to retrieve delegator hints for orchestrators, helping reduce gas fees when interacting with Livepeer BondingManager contract.",
 };
 
+/**
+ * Root layout component for the application.
+ */
 export default function RootLayout({
   children,
 }: {
@@ -27,6 +34,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <GithubCorner href="https://github.com/rickstaa/livepeer-delegate-hints" />
         {children}
       </body>
     </html>

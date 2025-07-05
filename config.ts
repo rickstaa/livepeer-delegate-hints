@@ -1,3 +1,6 @@
+/**
+ * @file Contains app wide configuration constants.
+ */
 import { AbiItem } from "web3-utils";
 import BONDING_MANAGER_ABI_JSON from "./ABI/BondingManager.json";
 import ROUNDS_MANAGER_ABI_JSON from "./ABI/RoundsManager.json";

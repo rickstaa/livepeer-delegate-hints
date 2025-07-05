@@ -1,3 +1,7 @@
+/**
+ * @file Contains API route that serves the hints (prev and next orchestrators)
+ * for a given orchestrator address.
+ */
 import Web3 from "web3";
 import {
   ROUNDS_MANAGER_ABI,
@@ -6,8 +10,7 @@ import {
   RPC_ENDPOINT,
   BONDING_MANAGER_ADDRESS,
   ROUNDS_MANAGER_ADDRESS,
-} from "../../config";
-import type { NextApiRequest, NextApiResponse } from "next";
+} from "../../../config";
 
 /** Hints response */
 export interface Hints {
@@ -100,28 +103,35 @@ const fetchHints = async (orchestrator: string): Promise<Hints> => {
 };
 
 /**
- * API handler to get hints for a given orchestrator.
+ * Handles GET requests to fetch hints for a given orchestrator.
  */
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  const { orchestrator } = req.query;
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const orchestrator = url.searchParams.get("orchestrator");
 
-  if (!orchestrator || Array.isArray(orchestrator)) {
-    return res.status(400).json({ error: "Invalid orchestrator address." });
+  if (!orchestrator) {
+    return new Response(
+      JSON.stringify({ error: "Orchestrator address is required." }),
+      { status: 400 }
+    );
   }
 
   try {
     const hints = await fetchHints(orchestrator);
-    res.status(200).json({ hints });
+    return new Response(JSON.stringify({ hints }), { status: 200 });
   } catch (error) {
     if (error instanceof Error) {
       console.error("Error fetching hints:", error.message);
-      res.status(500).json({ error: error.message });
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        { status: 500 }
+      );
     } else {
       console.error("Unknown error:", error);
-      res.status(500).json({ error: "An unknown error occurred." });
+      return new Response(
+        JSON.stringify({ error: "An unknown error occurred." }),
+        { status: 500 }
+      );
     }
   }
 }

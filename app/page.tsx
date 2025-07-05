@@ -1,7 +1,10 @@
+/**
+ * @file Contains main app page.
+ */
 "use client";
 import { useState } from "react";
 import { isAddress } from "web3-validator";
-import type { Hints } from "../pages/api/getHints";
+import type { Hints } from "./api/getHints";
 
 /**
  * Home component.
