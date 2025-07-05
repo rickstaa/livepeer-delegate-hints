@@ -13,10 +13,15 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "Delegate Hints",
-  description: "Small app to retrieve delegator hints for orchestrators, helping reduce gas fees when interacting with Livepeer BondingManager contract.",
+  description:
+    "Small app to retrieve delegator hints for orchestrators, helping reduce gas fees when interacting with Livepeer BondingManager contract.",
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body

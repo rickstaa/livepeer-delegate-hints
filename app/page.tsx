@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { isAddress } from "web3-validator";
+import type { Hints } from "../pages/api/getHints";
 
 /**
  * Home component.
@@ -8,24 +9,24 @@ import { isAddress } from "web3-validator";
 export default function Home() {
   const [delegator, setDelegator] = useState("");
   const [orchestrator, setOrchestrator] = useState("");
-  const [results, setResults] = useState({ hints: null });
+  const [results, setResults] = useState<{ hints: Hints | null }>({ hints: null });
   const [addressError, setAddressError] = useState("");
   const [loading, setLoading] = useState(false);
 
   /**
    * Validates if the provided address is a valid Ethereum address.
-   * @param {string} address - The Ethereum address to validate.
-   * @returns {boolean} - Returns true if the address is valid, otherwise false.
+   * @param address - The Ethereum address to validate.
+   * @returns Returns true if the address is valid, otherwise false.
    */
-  const isValidEthAddress = (address) => {
+  const isValidEthAddress = (address: string): boolean => {
     return isAddress(address);
   };
 
   /**
    * Handles the change event for the delegator input field.
-   * @param {Object} e - The event object.
+   * @param e - The event object.
    */
-  const handleDelegatorChange = (e) => {
+  const handleDelegatorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setDelegator(value);
     setAddressError(
@@ -35,9 +36,9 @@ export default function Home() {
 
   /**
    * Handles the change event for the orchestrator input field.
-   * @param {Object} e - The event object.
+   * @param e - The event object.
    */
-  const handleOrchestratorChange = (e) => {
+  const handleOrchestratorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setOrchestrator(value);
     setAddressError(
@@ -47,10 +48,10 @@ export default function Home() {
 
   /**
    * Fetches the orchestrator address based on the provided delegator address.
-   * @param {string} delegator - The delegator address.
-   * @returns {Promise<string>} - The orchestrator address.
+   * @param delegator - The delegator address.
+   * @returns The orchestrator address.
    */
-  const fetchOrchestrator = async (delegator) => {
+  const fetchOrchestrator = async (delegator: string): Promise<string> => {
     const response = await fetch(`/api/getOrchestrator?delegator=${delegator}`);
     const data = await response.json();
     if (!response.ok) {
@@ -61,10 +62,10 @@ export default function Home() {
 
   /**
    * Fetches the hints for a given orchestrator.
-   * @param {string} orchestrator - The orchestrator address.
-   * @returns {Promise<Object>} - The hints object containing previous and next hints.
+   * @param orchestrator - The orchestrator address.
+   * @returns The hints object containing previous and next hints.
    */
-  const fetchHints = async (orchestrator) => {
+  const fetchHints = async (orchestrator: string): Promise<Hints> => {
     const response = await fetch(`/api/getHints?orchestrator=${orchestrator}`);
     const data = await response.json();
     if (!response.ok) {
@@ -77,7 +78,7 @@ export default function Home() {
    * Fetches hints based on the provided delegator or orchestrator address.
    * If the orchestrator address is not provided, it fetches it using the delegator
    * address.
-   * @returns {Promise<void>} - A promise that resolves when the hints are fetched.
+   * @returns A promise that resolves when the hints are fetched.
    */
   const getHints = async () => {
     try {
@@ -87,7 +88,7 @@ export default function Home() {
       if (!isValidEthAddress(delegator) && !isValidEthAddress(orchestrator)) {
         setAddressError(
           "Invalid Ethereum address. Please provide a valid delegator or " +
-            "orchestrator address."
+          "orchestrator address."
         );
         setLoading(false);
         return;
@@ -130,9 +131,8 @@ export default function Home() {
             placeholder="Enter Delegator Address"
             value={delegator}
             onChange={handleDelegatorChange}
-            className={`border p-2 rounded w-full bg-gray-800 text-white mt-4 ${
-              addressError ? "border-red-500" : "border-gray-700"
-            }`}
+            className={`border p-2 rounded w-full bg-gray-800 text-white mt-4 ${addressError ? "border-red-500" : "border-gray-700"
+              }`}
           />
         </div>
         <div className="w-full sm:w-96">
@@ -145,9 +145,8 @@ export default function Home() {
             placeholder="Enter Orchestrator Address (optional)"
             value={orchestrator}
             onChange={handleOrchestratorChange}
-            className={`border p-2 rounded w-full bg-gray-800 text-white mt-4 ${
-              addressError ? "border-red-500" : "border-gray-700"
-            }`}
+            className={`border p-2 rounded w-full bg-gray-800 text-white mt-4 ${addressError ? "border-red-500" : "border-gray-700"
+              }`}
           />
           {addressError && (
             <p className="text-red-500 text-sm mt-1">{addressError}</p>
@@ -155,11 +154,10 @@ export default function Home() {
         </div>
         <button
           onClick={getHints}
-          className={`bg-blue-500 text-white px-4 py-2 rounded mt-4 ${
-            !isValidEthAddress(delegator) && !isValidEthAddress(orchestrator)
+          className={`bg-blue-500 text-white px-4 py-2 rounded mt-4 ${!isValidEthAddress(delegator) && !isValidEthAddress(orchestrator)
               ? "opacity-50 cursor-not-allowed"
               : ""
-          }`}
+            }`}
           disabled={
             !isValidEthAddress(delegator) && !isValidEthAddress(orchestrator)
           }

@@ -7,8 +7,18 @@ import {
   BONDING_MANAGER_ADDRESS,
   ROUNDS_MANAGER_ADDRESS,
 } from "../../config";
+import type { NextApiRequest, NextApiResponse } from "next";
 
-const CACHE = {
+/** Hints response */
+export interface Hints {
+  prev: string;
+  next: string;
+}
+
+const CACHE: {
+  round: number | null;
+  data: Record<string, Hints>;
+} = {
   round: null,
   data: {},
 };
@@ -26,15 +36,15 @@ const ROUNDS_MANAGER = new WEB3.eth.Contract(
 /**
  * Builds the hints table (prev and next orchestrators) by iterating through the pool.
  *
- * @returns {Promise<Object>} - A mapping of orchestrator addresses to their `prev` and
+ * @returns A mapping of orchestrator addresses to their `prev` and
  * `next` hints.
  */
-const buildHintsTable = async () => {
+const buildHintsTable = async (): Promise<Record<string, Hints>> => {
   let prevTranscoder = EMPTY_ADDRESS;
-  let nextTranscoder = await BONDING_MANAGER.methods
+  let nextTranscoder = (await BONDING_MANAGER.methods
     .getFirstTranscoderInPool()
-    .call();
-  const hints = {};
+    .call()) as string;
+  const hints: Record<string, Hints> = {};
 
   while (nextTranscoder !== EMPTY_ADDRESS) {
     hints[nextTranscoder] = {
@@ -43,9 +53,9 @@ const buildHintsTable = async () => {
     };
 
     prevTranscoder = nextTranscoder;
-    nextTranscoder = await BONDING_MANAGER.methods
+    nextTranscoder = (await BONDING_MANAGER.methods
       .getNextTranscoderInPool(nextTranscoder)
-      .call();
+      .call()) as string;
 
     if (prevTranscoder !== EMPTY_ADDRESS) {
       hints[prevTranscoder].next = nextTranscoder;
@@ -59,12 +69,14 @@ const buildHintsTable = async () => {
  * Fetches hints (prev and next orchestrators) for a given orchestrator.
  * Uses cached data if the round hasn't changed; otherwise, updates the cache.
  *
- * @param {string} orchestrator - Orchestrator address.
- * @returns {Promise<Object>} - Hints for the orchestrator (`prev` and `next`).
- * @throws {Error} - If orchestrator is not found.
+ * @param  orchestrator - Orchestrator address.
+ * @returns Hints for the orchestrator (`prev` and `next`).
  */
-const fetchHints = async (orchestrator) => {
-  const currentRound = await ROUNDS_MANAGER.methods.currentRound().call();
+const fetchHints = async (orchestrator: string): Promise<Hints> => {
+  const currentRound = parseInt(
+    (await ROUNDS_MANAGER.methods.currentRound().call()) as string,
+    10
+  );
 
   // If the round hasn't changed, use cached data.
   if (CACHE.round === currentRound) {
@@ -90,18 +102,26 @@ const fetchHints = async (orchestrator) => {
 /**
  * API handler to get hints for a given orchestrator.
  */
-export default async function handler(req, res) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { orchestrator } = req.query;
 
-  if (!orchestrator) {
-    return res.status(400).json({ error: "Orchestrator address is required." });
+  if (!orchestrator || Array.isArray(orchestrator)) {
+    return res.status(400).json({ error: "Invalid orchestrator address." });
   }
 
   try {
     const hints = await fetchHints(orchestrator);
     res.status(200).json({ hints });
   } catch (error) {
-    console.error("Error fetching hints:", error);
-    res.status(500).json({ error: error.message || "Failed to fetch hints." });
+    if (error instanceof Error) {
+      console.error("Error fetching hints:", error.message);
+      res.status(500).json({ error: error.message });
+    } else {
+      console.error("Unknown error:", error);
+      res.status(500).json({ error: "An unknown error occurred." });
+    }
   }
 }
