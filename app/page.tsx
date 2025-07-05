@@ -120,7 +120,7 @@ export default function Home() {
   };
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 bg-gray-900 text-white font-sans">
+    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-6 pb-16 gap-12 sm:p-16 bg-gray-900 text-white font-sans">
       <main className="flex flex-col gap-6 row-start-2 items-center sm:items-start">
         <h1 className="text-2xl font-bold">Get Delegate Hints</h1>
         <p>
@@ -140,8 +140,7 @@ export default function Home() {
         </div>
         <div className="w-full sm:w-96">
           <p className="text-sm text-gray-400 mt-2">
-            If you already know the orchestrator address, you can enter it
-            below.
+            If you already know the orchestrator address, you can enter it below.
           </p>
           <input
             type="text"

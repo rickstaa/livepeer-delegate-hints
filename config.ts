@@ -13,7 +13,7 @@ export const ROUNDS_MANAGER_ABI: AbiItem[] =
 export const EMPTY_ADDRESS: string =
   "0x0000000000000000000000000000000000000000";
 export const RPC_ENDPOINT: string =
-  process.env.NEXT_PUBLIC_RPC_URL || "https://arb1.arbitrum.io/rpc";
+  process.env.RPC_URL || "https://arb1.arbitrum.io/rpc";
 export const BONDING_MANAGER_ADDRESS: string =
   "0x35Bcf3c30594191d53231E4FF333E8A770453e40";
 export const ROUNDS_MANAGER_ADDRESS: string =
