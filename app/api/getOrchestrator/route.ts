@@ -32,6 +32,7 @@ export async function GET(request: Request) {
   const delegator = url.searchParams.get("delegator");
 
   if (!delegator) {
+    console.error("Error: Missing delegator parameter in request.");
     return new Response(
       JSON.stringify({ error: "Delegator address is required." }),
       { status: 400 }
@@ -39,10 +40,9 @@ export async function GET(request: Request) {
   }
 
   if (CACHE[delegator]) {
-    return new Response(
-      JSON.stringify({ orchestrator: CACHE[delegator] }),
-      { status: 200 }
-    );
+    return new Response(JSON.stringify({ orchestrator: CACHE[delegator] }), {
+      status: 200,
+    });
   }
 
   try {
@@ -57,10 +57,15 @@ export async function GET(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error fetching orchestrator:", error);
-    return new Response(
-      JSON.stringify({ error: "Failed to fetch orchestrator." }),
-      { status: 500 }
+    console.error(
+      `Error fetching orchestrator for delegator: ${delegator}.`,
+      error
     );
+
+    const errorMessage =
+      error instanceof Error ? error.message : "An unknown error occurred.";
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+    });
   }
 }
