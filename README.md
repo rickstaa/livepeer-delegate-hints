@@ -21,7 +21,7 @@ Providing accurate hints avoids expensive linear searches in the contract, signi
 2. (Optional) Set the RPC endpoint variable in the `.env` file:
 
    ```properties
-   NEXT_PUBLIC_RPC_URL=<your_rpc_endpoint>
+   RPC_URL=<your_rpc_endpoint>
    ```
 
    Replace `<your_rpc_endpoint>` with the URL of your desired Ethereum RPC endpoint (e.g., `https://arb1.arbitrum.io/rpc`).
