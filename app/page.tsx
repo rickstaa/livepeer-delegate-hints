@@ -81,8 +81,8 @@ export default function Home() {
       throw new Error(data.error || "Failed to fetch hints.");
     }
     return {
-      prev: data.hints.prev.toLowerCase(),
-      next: data.hints.next.toLowerCase(),
+      prev: data.hints.prev,
+      next: data.hints.next,
     };
   };
 
