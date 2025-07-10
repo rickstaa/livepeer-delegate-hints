@@ -51,7 +51,7 @@ const buildHintsTable = async (): Promise<Record<string, Hints>> => {
     const hints: Record<string, Hints> = {};
 
     while (nextTranscoder !== EMPTY_ADDRESS) {
-      hints[nextTranscoder] = {
+      hints[nextTranscoder.toLowerCase()] = {
         prev: prevTranscoder,
         next: EMPTY_ADDRESS,
       };
@@ -62,17 +62,16 @@ const buildHintsTable = async (): Promise<Record<string, Hints>> => {
         .call()) as string;
 
       if (prevTranscoder !== EMPTY_ADDRESS) {
-        hints[prevTranscoder].next = nextTranscoder;
+        hints[prevTranscoder.toLowerCase()].next = nextTranscoder;
       }
     }
 
     return hints;
   } catch (error) {
     console.error("Error building hints table:", error);
-
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred.";
-    throw new Error(errorMessage);
+    throw new Error(
+      error instanceof Error ? error.message : "An unknown error occurred."
+    );
   }
 };
 

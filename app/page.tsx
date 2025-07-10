@@ -12,7 +12,9 @@ import type { Hints } from "./api/getHints";
 export default function Home() {
   const [delegator, setDelegator] = useState("");
   const [orchestrator, setOrchestrator] = useState("");
-  const [results, setResults] = useState<{ hints: Hints | null }>({ hints: null });
+  const [results, setResults] = useState<{ hints: Hints | null }>({
+    hints: null,
+  });
   const [addressError, setAddressError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +32,7 @@ export default function Home() {
    * @param e - The event object.
    */
   const handleDelegatorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+    const value = e.target.value.toLowerCase();
     setDelegator(value);
     setAddressError(
       isValidEthAddress(value) ? "" : "Invalid Ethereum address."
@@ -42,7 +44,7 @@ export default function Home() {
    * @param e - The event object.
    */
   const handleOrchestratorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+    const value = e.target.value.toLowerCase();
     setOrchestrator(value);
     setAddressError(
       isValidEthAddress(value) ? "" : "Invalid Ethereum address."
@@ -55,12 +57,14 @@ export default function Home() {
    * @returns The orchestrator address.
    */
   const fetchOrchestrator = async (delegator: string): Promise<string> => {
-    const response = await fetch(`/api/getOrchestrator?delegator=${delegator}`);
+    const response = await fetch(
+      `/api/getOrchestrator?delegator=${delegator.toLowerCase()}`
+    );
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error || "Failed to fetch orchestrator.");
     }
-    return data.orchestrator;
+    return data.orchestrator.toLowerCase();
   };
 
   /**
@@ -69,12 +73,17 @@ export default function Home() {
    * @returns The hints object containing previous and next hints.
    */
   const fetchHints = async (orchestrator: string): Promise<Hints> => {
-    const response = await fetch(`/api/getHints?orchestrator=${orchestrator}`);
+    const response = await fetch(
+      `/api/getHints?orchestrator=${orchestrator.toLowerCase()}`
+    );
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error || "Failed to fetch hints.");
     }
-    return data.hints;
+    return {
+      prev: data.hints.prev.toLowerCase(),
+      next: data.hints.next.toLowerCase(),
+    };
   };
 
   /**
